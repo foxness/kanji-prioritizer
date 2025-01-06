@@ -6,7 +6,7 @@ from colorsys import hsv_to_rgb
 
 from . import data
 
-unit_tuple = collections.namedtuple("unit", "idx value avg_interval count")
+unit_tuple = collections.namedtuple("unit", "idx value avg_interval known_count unknown_count card_ids")
 
 class SortOrder(enum.Enum):
     NONE = 0
@@ -32,26 +32,40 @@ def scoreAdjust(score):
 
 def addUnitData(units, unitKey, i, card, kanjionly):
     validKey = data.ignore.find(unitKey) == -1 and (not kanjionly or isKanji(unitKey))
-    if validKey:
-        if unitKey not in units:
-            unit = unit_tuple(0, unitKey, 0.0, 0)
-            units[unitKey] = unit
-        units[unitKey] = addDataFromCard(units[unitKey], i, card)
+    if not validKey:
+        return
+    
+    if unitKey not in units:
+        unit = unit_tuple(0, unitKey, 0.0, 0, 0, [])
+        units[unitKey] = unit
+    
+    units[unitKey] = addDataFromCard(units[unitKey], i, card)
 
 def addDataFromCard(unit, idx, card):
     new_idx = unit.idx
     new_avg_interval = unit.avg_interval
-    new_count = unit.count
+    new_known_count = unit.known_count
+    new_unknown_count = unit.unknown_count
+    new_card_ids = unit.card_ids + [idx]
 
     if card.type > 0:
-        newTotal = (unit.avg_interval * unit.count) + card.ivl
-        new_count = unit.count + 1
-        new_avg_interval = newTotal / new_count
+        newTotal = (unit.avg_interval * unit.known_count) + card.ivl
+        new_known_count += 1
+        new_avg_interval = newTotal / new_known_count
+    else:
+        new_unknown_count += 1
 
     if new_idx < unit.idx or unit.idx == 0:
         new_idx = idx
 
-    return unit_tuple(new_idx, unit.value, new_avg_interval, new_count)
+    return unit_tuple(
+        new_idx,
+        unit.value,
+        new_avg_interval,
+        new_known_count,
+        new_unknown_count,
+        new_card_ids
+    )
 
 def hsvrgbstr(h, s=0.8, v=0.9):
     def _256(x):

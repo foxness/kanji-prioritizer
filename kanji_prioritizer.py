@@ -64,15 +64,15 @@ def run_prioritizer():
     
     config.did = '*'
     config.fieldslist = ['expression']
-    config.sortby = util.SortOrder.NONE
+    config.sortby = util.SortOrder.FREQUENCY
     
     units = get_units(mw, config)
     
     unitsList = {
-        util.SortOrder.NONE:      sorted(units.values(), key=lambda unit: (unit.idx, unit.count)),
-        util.SortOrder.UNICODE:   sorted(units.values(), key=lambda unit: (util.safe_unicodedata_name(unit.value), unit.count)),
-        util.SortOrder.SCORE:     sorted(units.values(), key=lambda unit: (util.scoreAdjust(unit.avg_interval / config.interval), unit.count), reverse=True),
-        util.SortOrder.FREQUENCY: sorted(units.values(), key=lambda unit: (unit.count, util.scoreAdjust(unit.avg_interval / config.interval)), reverse=True),
+        util.SortOrder.NONE:      sorted(units.values(), key=lambda unit: (unit.idx, unit.known_count)),
+        util.SortOrder.UNICODE:   sorted(units.values(), key=lambda unit: (util.safe_unicodedata_name(unit.value), unit.known_count)),
+        util.SortOrder.SCORE:     sorted(units.values(), key=lambda unit: (util.scoreAdjust(unit.avg_interval / config.interval), unit.known_count), reverse=True),
+        util.SortOrder.FREQUENCY: sorted(units.values(), key=lambda unit: (unit.known_count, util.scoreAdjust(unit.avg_interval / config.interval)), reverse=True),
     }[util.SortOrder(config.sortby)]
         
     total_count = 0
@@ -80,12 +80,12 @@ def run_prioritizer():
     unknown_units = []
     for unit in unitsList:
         total_count += 1
-        bgcolor = util.get_background_color(unit.avg_interval, config.interval, unit.count)
         
-        is_known = unit.count != 0 or bgcolor not in ["#E62E2E", "#FFF"]
+        is_known = unit.known_count > 0
         if is_known:
             count_known += 1
         else:
             unknown_units.append(unit)
     
-    show_info(f'Total Count: {total_count}, Known: {count_known}, Unknown: {len(unknown_units)}')
+    unknown_units = sorted(unknown_units, key=lambda unit: unit.unknown_count, reverse=True)
+    # show_info(f'unknown_units[:3]: {unknown_units[:3]}')
